@@ -4,6 +4,7 @@ import type { StoreState } from './reducer';
 export interface StoreApi {
   state: StoreState;
   loadFile: (file: File) => Promise<void>;
+  setActiveSheet: (sheetName: string) => void;
   reset: () => void;
 }
 

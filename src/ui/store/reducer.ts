@@ -24,6 +24,7 @@ export type StoreAction =
   | { type: 'LOAD_START'; fileName: string }
   | { type: 'LOAD_SUCCESS'; workbook: Workbook; validation: ValidationResult }
   | { type: 'LOAD_ERROR'; issues: Issue[] }
+  | { type: 'SET_SHEET'; sheetName: string }
   | { type: 'RESET' };
 
 /**
@@ -50,6 +51,15 @@ export function reducer(state: StoreState, action: StoreAction): StoreState {
         pendingFileName: null,
         errorIssues: action.issues,
       };
+    case 'SET_SHEET': {
+      // Sheet switching only selects among the visible sheets already in the
+      // workbook; hidden/unknown names and no-ops leave the state untouched (AD-3).
+      const workbook = state.workbook;
+      if (!workbook) return state;
+      const target = workbook.sheets.find((sheet) => sheet.name === action.sheetName);
+      if (!target || target.hidden || target.name === workbook.activeSheetName) return state;
+      return { ...state, workbook: { ...workbook, activeSheetName: target.name } };
+    }
     case 'RESET':
       return { ...initialState, errorIssues: [] };
     default:

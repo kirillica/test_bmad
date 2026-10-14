@@ -48,7 +48,15 @@ export function WorkbookStoreProvider({ children }: { children: ReactNode }) {
 
   const reset = useCallback(() => dispatch({ type: 'RESET' }), []);
 
-  const value = useMemo<StoreApi>(() => ({ state, loadFile, reset }), [state, loadFile, reset]);
+  const setActiveSheet = useCallback(
+    (sheetName: string) => dispatch({ type: 'SET_SHEET', sheetName }),
+    [],
+  );
+
+  const value = useMemo<StoreApi>(
+    () => ({ state, loadFile, setActiveSheet, reset }),
+    [state, loadFile, setActiveSheet, reset],
+  );
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }

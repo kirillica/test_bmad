@@ -1,7 +1,18 @@
-import type { Issue } from '../../domain/model';
+import type { ColumnType, Issue } from '../../domain/model';
 import { ROW_LIMIT } from '../../domain/schema';
 
 const ROW_LIMIT_TEXT = ROW_LIMIT.toLocaleString('ru-RU');
+
+/** Russian plural for "значение" agreeing with the cardinal (1/2/5). */
+function pluralValues(count: number): string {
+  const mod10 = count % 10;
+  const mod100 = count % 100;
+  if (mod10 === 1 && mod100 !== 11) return `${count} непустое значение`;
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) {
+    return `${count} непустых значения`;
+  }
+  return `${count} непустых значений`;
+}
 
 /** Every user-facing string lives here — components never hardcode copy. */
 export const ru = {
@@ -10,6 +21,9 @@ export const ru = {
   themeToLight: 'Светлая тема',
   themeToDark: 'Тёмная тема',
   screenTitle: 'Загрузка данных',
+  dataTitle: 'Данные',
+  sheetsLabel: 'Листы файла',
+  emptySheet: 'Лист пуст',
   chooseFile: 'Выбрать файл',
   dropTitle: 'Перетащите файл сюда',
   dropHint: 'или нажмите, чтобы выбрать на устройстве',
@@ -17,11 +31,17 @@ export const ru = {
   privacy: 'Файл обрабатывается локально и не покидает устройство.',
   reading: 'Чтение файла и проверка структуры…',
   readingFile: (name: string) => `Чтение файла «${name}» и проверка структуры…`,
-  ready: 'Файл готов к анализу',
   errorTitle: 'Файл не загружен',
   fixAndRetry: 'Проверьте структуру файла и загрузите снова.',
   sheetsCount: (count: number) => `Листов: ${count}`,
-  fileNameLine: (name: string) => `Файл: ${name}`,
+  unnamedColumn: (n: number) => `Колонка ${n}`,
+  previewTruncated: (shown: number, total: number) => `Показаны первые ${shown} из ${total} строк`,
+  columnTypes: {
+    number: 'число',
+    date: 'дата',
+    text: 'текст',
+  } satisfies Record<ColumnType, string>,
+  nonEmptyValues: pluralValues,
   rejectedFile: (name: string) => `Файл «${name}» не поддерживается.`,
 };
 

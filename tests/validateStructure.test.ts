@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import {
-  analyzeSheet,
-  analyzeWorkbook,
-  classifyCell,
-} from '../src/domain/pipeline/validateStructure';
+import { classifyCell } from '../src/domain/pipeline/inferTypes';
+import { analyzeSheet, analyzeWorkbook } from '../src/domain/pipeline/validateStructure';
 import type { Issue } from '../src/domain/model';
 import { HEADERS, makeSheet, makeWorkbook, rowFor, sampleRows } from './fixtures';
 
