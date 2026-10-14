@@ -1,0 +1,18 @@
+node_modules/
+dist/
+*.local
+.vite/
+coverage/
+*.tgz
+.DS_Store
+Thumbs.db
+
+# BMad tooling / agent runtime (not project source)
+.agents/
+.opencode/
+_bmad/
+
+# Editor / OS
+.idea/
+.vscode/
+*.log

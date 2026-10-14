@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>U3 Анализ — XLS-Аналитика</title>
+<style>
+/* =====================================================================
+   KEY SCREEN: U3 Анализ (dark theme — полноправная вторая тема)
+   Governing spines:
+   - EXPERIENCE.md -> IA (U3), Component Patterns (Чипы фильтров,
+     View-switcher, Графики, Экспорт, Toast), Core States (Фильтр,
+     Экспорт), Flow-1 (кульминация), Voice and Tone, Accessibility Floor
+     (контраст AA в обеих темах)
+   - DESIGN.md      -> Colors (-dark tokens), Components (filter-chip,
+     view-switcher, chart-container, data-table, toast), Typography (numeric)
+   Static HTML+CSS, no JS, no network. Токены 1:1 из DESIGN.md frontmatter (dark).
+   ===================================================================== */
+:root{
+  --bg:#0B1220; --surface:#111A2C; --fg:#E2E8F0; --muted:#94A3B8;
+  --border:#1E293B; --primary:#60A5FA; --primary-fg:#0B1220;
+  --accent:#FBBF24; --success:#34D399; --destructive:#F87171;
+  --primary-bg:rgba(96,165,250,.12); --amber-bg:rgba(251,191,36,.10);
+  --c1:#60A5FA; --c2:#2DD4BF; --c3:#FBBF24; --c4:#A78BFA; --c5:#FB7185; --c6:#94A3B8;
+  --font:'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--fg);font-family:var(--font);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.num{font-variant-numeric:tabular-nums}
+/* ---------- Header ---------- */
+.header{display:flex;align-items:center;gap:16px;height:56px;padding:0 24px;background:var(--surface);border-bottom:1px solid var(--border)}
+.brand{font-size:16px;font-weight:600;letter-spacing:-.01em}
+.brand .dot{color:var(--primary)}
+.header .spacer{flex:1}
+.pill{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border:1px solid var(--border);border-radius:999px;background:var(--surface);color:var(--fg);font-size:12px;white-space:nowrap}
+.pill .dot{width:6px;height:6px;border-radius:50%;background:var(--success)}
+.theme-toggle{display:flex;height:28px;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface);font-size:12px}
+.theme-toggle span{padding:0 10px;line-height:26px;color:var(--muted)}
+.theme-toggle span.active{background:var(--primary);color:var(--primary-fg);font-weight:500}
+.btn-secondary{display:inline-flex;align-items:center;justify-content:center;height:28px;padding:0 12px;background:var(--surface);border:1px solid var(--border);color:var(--fg);border-radius:8px;font-size:12px;font-weight:500;cursor:pointer}
+/* ---------- Tabs ---------- */
+.tabs{display:flex;gap:4px;padding:0 24px;border-bottom:1px solid var(--border);background:var(--surface)}
+.tab{padding:12px 16px 10px;font-size:14px;color:var(--muted);border-bottom:2px solid transparent;cursor:pointer;font-weight:500}
+.tab.active{color:var(--primary);border-bottom-color:var(--primary)}
+/* ---------- Main ---------- */
+.main{max-width:1280px;margin:0 auto;padding:16px 24px 48px}
+/* Filter bar */
+.filters{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:12px 0;border-bottom:1px solid var(--border);margin-bottom:16px}
+.fchip{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 12px;border-radius:999px;border:1px solid var(--border);background:var(--surface);color:var(--fg);font-size:12px;cursor:pointer}
+.fchip .cval{color:var(--muted)}
+.fchip.on{border-color:var(--primary);background:var(--primary-bg);color:var(--primary)}
+.fchip.on .cval{color:var(--primary)}
+.fchip .x{opacity:.7}
+.link{font-size:12px;color:var(--muted);background:none;border:none;cursor:pointer;padding:0 4px;text-decoration:underline}
+/* Summary strip */
+.summary{display:flex;gap:24px;align-items:center;font-size:13px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:16px}
+.summary .k{color:var(--muted)}
+.summary b{font-weight:600}
+/* ---------- Cards ---------- */
+.cards{display:grid;grid-template-columns:1.6fr 1fr;gap:16px}
+@media(max-width:960px){.cards{grid-template-columns:1fr}}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.card .chead{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border)}
+.card .chead h2{font-size:16px;font-weight:600;line-height:1.4;flex:1}
+.card .cbody{padding:16px}
+/* View switcher */
+.vswitch{display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface);font-size:12px}
+.vswitch span{padding:0 12px;line-height:28px;color:var(--muted);white-space:nowrap}
+.vswitch span.active{background:var(--surface);color:var(--fg);font-weight:500;box-shadow:0 1px 2px rgba(0,0,0,.4)}
+.export{position:relative}
+.export button{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border:1px solid var(--border);background:var(--surface);color:var(--fg);border-radius:8px;font-size:12px;cursor:pointer}
+/* ---------- Bar chart ---------- */
+.bars{display:flex;align-items:flex-end;gap:20px;height:220px;padding:10px 4px 0;border-bottom:1px solid var(--border)}
+.bcol{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;min-width:0}
+.bcol .bar{width:100%;max-width:64px;border-radius:6px 6px 0 0;background:var(--c1);position:relative}
+.bcol:nth-child(2) .bar{background:var(--c2)}
+.bcol:nth-child(3) .bar{background:var(--c3)}
+.bcol:nth-child(4) .bar{background:var(--c4)}
+.bcol:nth-child(5) .bar{background:var(--c5)}
+.bcol .val{font-size:12px;color:var(--fg);font-variant-numeric:tabular-nums}
+.bcol .lbl{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+/* ---------- Pivot table ---------- */
+.pivot{width:100%;border-collapse:collapse;font-size:13px}
+.pivot th,.pivot td{padding:7px 12px;border-bottom:1px solid var(--border);text-align:left}
+.pivot th{background:rgba(148,163,184,.10);font-weight:600;font-size:12px;letter-spacing:.02em}
+.pivot td.num{text-align:right;font-variant-numeric:tabular-nums}
+.pivot tr.total td{font-weight:600;border-top:2px solid var(--border);border-bottom:none}
+/* ---------- Toast (alternate state) ---------- */
+.toast{display:inline-flex;align-items:center;gap:8px;padding:12px 16px;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.4);font-size:13px}
+.toast .ck{color:var(--success)}
+.alt{padding:24px 0 8px;display:flex;flex-direction:column;gap:16px}
+.alt .cap{color:var(--muted);font-size:12px}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="brand">XLS-Аналитика<span class="dot">.</span></div>
+  <div class="spacer"></div>
+  <span class="pill"><span class="dot"></span>Новый документ от 08.10.2026.xlsx · 1 лист</span>
+  <span class="theme-toggle"><span>Светлая</span><span class="active">Тёмная</span></span>
+  <button class="btn-secondary">Новый файл</button>
+</header>
+
+<nav class="tabs">
+  <div class="tab">Данные</div>
+  <div class="tab active">Анализ</div>
+</nav>
+
+<main class="main">
+  <!-- Панель фильтров -->
+  <div class="filters">
+    <span class="fchip on">Тип работы <span class="cval">Документация</span> <span class="x">✕</span></span>
+    <span class="fchip">Статус <span class="cval">все</span></span>
+    <span class="fchip">Исполнитель <span class="cval">все</span></span>
+    <span class="fchip">Эпик <span class="cval">все</span></span>
+    <span class="spacer" style="flex:1"></span>
+    <button class="link">Сбросить</button>
+  </div>
+
+  <!-- Сводная строка -->
+  <div class="summary">
+    <div><span class="k">Служебных строк:</span> <b class="num">49</b></div>
+    <div><span class="k">После фильтра:</span> <b class="num">412</b> строк</div>
+    <div><span class="k">Затрачено времени:</span> <b class="num">1&nbsp;248,5 ч</b></div>
+  </div>
+
+  <div class="cards">
+    <!-- Карточка графика -->
+    <div class="card">
+      <div class="chead">
+        <h2>Трудозатраты по исполнителям · Тип работы = Документация</h2>
+        <div class="vswitch"><span>Линейный</span><span class="active">Столбчатый</span><span>Круговой</span><span>Таблица</span></div>
+        <div class="export"><button>Экспорт ▾</button></div>
+      </div>
+      <div class="cbody">
+        <div class="bars">
+          <div class="bcol"><div class="val num">96</div><div class="bar" style="height:80%"></div><div class="lbl">Иванова А.</div></div>
+          <div class="bcol"><div class="val num">74</div><div class="bar" style="height:62%"></div><div class="lbl">Петров С.</div></div>
+          <div class="bcol"><div class="val num">41</div><div class="bar" style="height:34%"></div><div class="lbl">Сидоров М.</div></div>
+          <div class="bcol"><div class="val num">28</div><div class="bar" style="height:23%"></div><div class="lbl">Кузнецова Е.</div></div>
+          <div class="bcol"><div class="val num">12</div><div class="bar" style="height:10%"></div><div class="lbl">Черных О.</div></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;color:var(--muted);font-size:12px;padding-top:8px"><span>ч</span><span class="num">251 ч · 412 строк</span></div>
+      </div>
+    </div>
+
+    <!-- Карточка сводной таблицы -->
+    <div class="card">
+      <div class="chead">
+        <h2>Сводная по статусам (ч)</h2>
+        <div class="export"><button>Экспорт ▾</button></div>
+      </div>
+      <div class="cbody" style="padding:0">
+        <table class="pivot">
+          <thead><tr><th>Статус</th><th class="num">Затрачено (ч)</th><th class="num">Строк</th></tr></thead>
+          <tbody>
+            <tr><td>Готово</td><td class="num">612,5</td><td class="num">261</td></tr>
+            <tr><td>В работе</td><td class="num">351,0</td><td class="num">84</td></tr>
+            <tr><td>На ревью</td><td class="num">128,0</td><td class="num">31</td></tr>
+            <tr><td>В очереди</td><td class="num">106,0</td><td class="num">36</td></tr>
+            <tr class="total"><td>Итого</td><td class="num">1&nbsp;248,5</td><td class="num">412</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Альтернативное состояние: тост подтверждения экспорта (Core States → Экспорт) -->
+  <div class="alt">
+    <div class="cap">Альтернатива: тост подтверждения экспорта — Core States · Экспорт; автоскрытие 5&nbsp;с, для ошибок — без автоскрытия</div>
+    <div>
+      <div class="toast"><span class="ck">✓</span> Экспорт готов: <b>otchet.pdf</b> · <span class="num">248 КБ</span> · текущее состояние экрана (фильтр «Документация»)</div>
+    </div>
+  </div>
+</main>
+
+</body>
+</html>

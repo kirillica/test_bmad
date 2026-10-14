@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>U1 Загрузка — XLS-Аналитика</title>
+<style>
+/* =====================================================================
+   KEY SCREEN: U1 Загрузка (light, default theme)
+   Governing spines:
+   - EXPERIENCE.md  -> Foundation, IA (U1), Core States (Пустое приложение,
+     Загрузка, Валидация, Блокирующая ошибка), Component Patterns (Drop-zone),
+     Voice and Tone (Do/Don't), Flow-2 (лимит 30 000)
+   - DESIGN.md      -> Colors (light tokens), Components (drop-zone, button),
+     Typography (body/label/numeric), Spacing, Shapes
+   Static HTML+CSS, no JS, no network. Tokens 1:1 из DESIGN.md frontmatter.
+   ===================================================================== */
+:root{
+  --bg:#F6F8FB; --surface:#FFFFFF; --fg:#101828; --muted:#64748B;
+  --border:#E2E8F0; --primary:#2563EB; --primary-fg:#FFFFFF;
+  --accent:#D97706; --success:#059669; --destructive:#DC2626;
+  --amber-bg:rgba(217,119,6,.08); --red-bg:rgba(220,38,38,.06);
+  --shadow:0 8px 24px rgba(16,24,40,.16);
+  --font:'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--fg);font-family:var(--font);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+/* ---------- Header (global) ---------- */
+.header{display:flex;align-items:center;gap:16px;height:56px;padding:0 24px;background:var(--surface);border-bottom:1px solid var(--border)}
+.brand{font-size:16px;font-weight:600;letter-spacing:-.01em}
+.brand .dot{color:var(--primary)}
+.header .spacer{flex:1}
+.pill{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border:1px solid var(--border);border-radius:999px;background:var(--surface);color:var(--fg);font-size:12px;white-space:nowrap}
+.pill .dot{width:6px;height:6px;border-radius:50%;background:var(--success)}
+.theme-toggle{display:flex;height:28px;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface);font-size:12px}
+.theme-toggle span{padding:0 10px;line-height:26px;color:var(--muted)}
+.theme-toggle span.active{background:var(--primary);color:var(--primary-fg);font-weight:500}
+/* ---------- Main / drop-zone ---------- */
+.main{max-width:1280px;margin:0 auto;padding:48px 24px}
+.zone{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;min-height:340px;border:2px dashed var(--border);border-radius:16px;background:var(--surface);padding:48px;text-align:center;cursor:pointer}
+.zone:hover,.zone.dragover{border-color:var(--primary);background:rgba(37,99,235,.04)}
+.zone .icon{width:48px;height:48px;color:var(--primary)}
+.zone h1{font-size:20px;font-weight:600;line-height:1.3}
+.zone .hint{color:var(--muted);font-size:14px}
+.zone .types{color:var(--muted);font-size:12px;margin-top:4px}
+.privacy{margin-top:16px;text-align:center;color:var(--muted);font-size:12px;display:flex;align-items:center;justify-content:center;gap:6px}
+.privacy svg{width:14px;height:14px;flex:none}
+/* ---------- Alternate states block ---------- */
+.alternates{margin-top:48px;border-top:1px solid var(--border);padding-top:24px}
+.alternates h2{font-size:16px;font-weight:600;margin-bottom:4px}
+.alternates .sub{color:var(--muted);font-size:12px;margin-bottom:20px}
+.state{max-width:640px;border:1px solid var(--border);border-radius:12px;background:var(--surface);overflow:hidden;margin-bottom:16px}
+.state .head{display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--red-bg)}
+.state .head svg{width:18px;height:18px;color:var(--destructive);flex:none}
+.state .head b{font-size:14px;font-weight:600}
+.state .head .what{flex:1;font-size:12px;color:var(--muted)}
+.state .body{padding:16px}
+.error{display:flex;gap:12px;align-items:flex-start;background:var(--red-bg);border:1px solid var(--destructive);border-radius:8px;padding:14px 16px}
+.error svg{width:18px;height:18px;color:var(--destructive);flex:none;margin-top:2px}
+.error .msg b{display:block;font-size:14px;font-weight:600}
+.error .msg span{font-size:13px;color:var(--muted)}
+.zone-small{margin-top:16px;border:2px dashed var(--border);border-radius:16px;padding:20px;text-align:center;color:var(--muted);font-size:13px;background:var(--surface)}
+.btn-primary{display:inline-flex;align-items:center;justify-content:center;height:36px;padding:0 16px;background:var(--primary);color:var(--primary-fg);border:none;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer}
+.tag{display:inline-flex;align-items:center;font-size:11px;font-weight:500;border-radius:999px;padding:2px 8px;background:var(--red-bg);color:var(--destructive);border:1px solid var(--destructive)}
+.note{font-size:12px;color:var(--muted);margin-top:8px}
+.num{font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+
+<!-- ===================== КАНОНИЧЕСКОЕ СОСТОЯНИЕ: пустое приложение ===================== -->
+<header class="header">
+  <div class="brand">XLS-Аналитика<span class="dot">.</span></div>
+  <div class="spacer"></div>
+  <span class="theme-toggle"><span>Светлая</span><span class="active">Тёмная</span></span>
+</header>
+
+<main class="main">
+  <div class="zone">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+    </svg>
+    <h1>Перетащите файл сюда или нажмите, чтобы выбрать</h1>
+    <div class="hint">Поддерживаются файлы XLS и XLSX, до 30&nbsp;000 строк на файл</div>
+    <div class="types">Структура проверяется автоматически · предупреждения вместо тихой порчи данных</div>
+  </div>
+  <div class="privacy">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    Файл обрабатывается локально на устройстве и не покидает его.
+  </div>
+</main>
+
+<!-- ===================== АЛЬТЕРНАТИВЫ: нагрузочные состояния U1 ===================== -->
+<section class="alternates">
+  <h2>Альтернативные состояния U1</h2>
+  <div class="sub">Блокирующие ошибки валидации — экземпляры одного паттерна «блокирующая ошибка» из EXPERIENCE.md (Flow-1 edge и Flow-2).</div>
+
+  <!-- Состояние: не найдена обязательная колонка -->
+  <div class="state">
+    <div class="head">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <b>Блокирующая ошибка</b>
+      <span class="what">Flow-1 edge · файл без обязательной колонки</span>
+    </div>
+    <div class="body">
+      <div class="error">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <div class="msg">
+          <b>Не найдена обязательная колонка «Статус».</b>
+          <span>Нужны колонки: Тип задачи, Задача, Статус, Исполнитель, Тип работы, Затрачено времени (ч). Проверьте структуру файла и загрузите снова.</span>
+        </div>
+      </div>
+      <div class="zone-small">Зона загрузки остаётся активной — можно выбрать исправленный файл</div>
+    </div>
+  </div>
+
+  <!-- Состояние: превышение лимита -->
+  <div class="state">
+    <div class="head">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <b>Блокирующая ошибка</b>
+      <span class="what">Flow-2 · файл сверх лимита</span>
+    </div>
+    <div class="body">
+      <div class="error">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <div class="msg">
+          <b>Файл превышает лимит <span class="num">30&nbsp;000</span> строк (<span class="num">45&nbsp;120</span>).</b>
+          <span>Сократите выгрузку и загрузите снова.</span>
+        </div>
+      </div>
+      <div class="note">Состояние соответствует Flow-2 EXPERIENCE.md: после блока — подсказка следующего шага, дроп-зона доступна.</div>
+    </div>
+  </div>
+</section>
+
+</body>
+</html>

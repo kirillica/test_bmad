@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>U2 Данные — XLS-Аналитика</title>
+<style>
+/* =====================================================================
+   KEY SCREEN: U2 Данные (light, default theme)
+   Governing spines:
+   - EXPERIENCE.md -> IA (U2), Core States (Предупреждения, Пустой лист),
+     Component Patterns (Вкладки листов, Чипы типов колонок, Баннер,
+     Data-table), Voice and Tone
+   - DESIGN.md      -> Colors, Typography (numeric), Components (warning-banner,
+     type-chip, data-table, tab), Spacing
+   Static HTML+CSS, no JS, no network. Токены 1:1 из DESIGN.md frontmatter.
+   ===================================================================== */
+:root{
+  --bg:#F6F8FB; --surface:#FFFFFF; --fg:#101828; --muted:#64748B;
+  --border:#E2E8F0; --primary:#2563EB; --primary-fg:#FFFFFF;
+  --accent:#D97706; --success:#059669; --destructive:#DC2626;
+  --amber-bg:rgba(217,119,6,.08);
+  --font:'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--fg);font-family:var(--font);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.num{font-variant-numeric:tabular-nums}
+/* ---------- Header ---------- */
+.header{display:flex;align-items:center;gap:16px;height:56px;padding:0 24px;background:var(--surface);border-bottom:1px solid var(--border)}
+.brand{font-size:16px;font-weight:600;letter-spacing:-.01em}
+.brand .dot{color:var(--primary)}
+.header .spacer{flex:1}
+.pill{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border:1px solid var(--border);border-radius:999px;background:var(--surface);color:var(--fg);font-size:12px;white-space:nowrap}
+.pill .dot{width:6px;height:6px;border-radius:50%;background:var(--success)}
+.btn-secondary{display:inline-flex;align-items:center;justify-content:center;height:28px;padding:0 12px;background:var(--surface);border:1px solid var(--border);color:var(--fg);border-radius:8px;font-size:12px;font-weight:500;cursor:pointer}
+/* ---------- Tabs (U2/U3) ---------- */
+.tabs{display:flex;gap:4px;padding:0 24px;border-bottom:1px solid var(--border);background:var(--surface)}
+.tab{padding:12px 16px 10px;font-size:14px;color:var(--muted);border-bottom:2px solid transparent;cursor:pointer;font-weight:500}
+.tab.active{color:var(--primary);border-bottom-color:var(--primary)}
+.tab.dim{color:var(--muted)}
+/* ---------- Warning banner ---------- */
+.banner{display:flex;gap:10px;align-items:flex-start;margin:16px 24px 0;padding:12px 16px;background:var(--amber-bg);border:1px solid var(--accent);border-radius:8px}
+.banner svg{width:18px;height:18px;color:var(--accent);flex:none;margin-top:1px}
+.banner b{font-size:14px;font-weight:600}
+.banner span{color:var(--muted);font-size:13px}
+/* ---------- Main ---------- */
+.main{max-width:1280px;margin:0 auto;padding:16px 24px 48px}
+.sheet-tabs{display:flex;gap:6px;margin:16px 0 12px}
+.sheet{padding:8px 14px;border:1px solid var(--border);border-radius:8px;background:var(--surface);font-size:13px;color:var(--muted);cursor:pointer}
+.sheet.active{background:rgba(37,99,235,.08);border-color:var(--primary);color:var(--primary);font-weight:500}
+/* ---------- Preview table ---------- */
+.table-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:7px 12px;border-bottom:1px solid var(--border);white-space:nowrap}
+th{background:rgba(100,116,139,.10);font-weight:600;font-size:12px;letter-spacing:.02em}
+th .chipwrap{display:flex;flex-direction:column;gap:4px;min-width:0}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+.chip{display:inline-flex;align-items:center;gap:5px;width:max-content;max-width:150px;padding:1px 8px;background:rgba(100,116,139,.12);color:#475569;border-radius:999px;font-size:11px;font-weight:500;position:relative;cursor:default}
+.chip .dots{overflow:hidden;text-overflow:ellipsis}
+.chip:hover::after{content:attr(data-tip);position:absolute;top:calc(100% + 4px);left:0;z-index:5;background:#101828;color:#fff;font-size:11px;font-weight:400;padding:5px 8px;border-radius:6px;white-space:nowrap;box-shadow:0 8px 24px rgba(16,24,40,.16)}
+tr.marker td{background:rgba(100,116,139,.05);color:var(--muted)}
+.tag{display:inline-flex;align-items:center;font-size:11px;border-radius:999px;padding:1px 8px;background:var(--amber-bg);border:1px solid var(--accent);color:#92600a;white-space:nowrap}
+.table-foot{padding:8px 12px;font-size:12px;color:var(--muted);border-top:1px solid var(--border)}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="brand">XLS-Аналитика<span class="dot">.</span></div>
+  <div class="spacer"></div>
+  <span class="pill"><span class="dot"></span>Новый документ от 08.10.2026.xlsx · 1 лист</span>
+  <button class="btn-secondary">Новый файл</button>
+</header>
+
+<nav class="tabs">
+  <div class="tab active">Данные</div>
+  <div class="tab dim">Анализ</div>
+</nav>
+
+<!-- Предупреждение о служебных строках (не-блокирующее) -->
+<div class="banner">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+  <div>
+    <b>Обнаружено <span class="num">49</span> служебных строк (заполнен только «Эпик») — исключены из анализа.</b>
+    <span>Проверьте, что это ожидаемо.</span>
+  </div>
+</div>
+
+<main class="main">
+  <div class="sheet-tabs">
+    <div class="sheet active">Main sheet</div>
+  </div>
+
+  <div class="table-card">
+    <table>
+      <thead>
+        <tr>
+          <th><div class="chipwrap"><span>Эпик</span><span class="chip" data-tip="Автотип: текст · 49 заполнено">текст</span></div></th>
+          <th><div class="chipwrap"><span>Тип задачи</span><span class="chip" data-tip="Автотип: текст · 627 непустых">текст</span></div></th>
+          <th><div class="chipwrap"><span>Задача</span><span class="chip" data-tip="Автотип: текст · 627 непустых">текст</span></div></th>
+          <th><div class="chipwrap"><span>Статус</span><span class="chip" data-tip="Автотип: текст · 627 непустых">текст</span></div></th>
+          <th><div class="chipwrap"><span>Исполнитель</span><span class="chip" data-tip="Автотип: текст · 627 непустых">текст</span></div></th>
+          <th><div class="chipwrap"><span>Тип работы</span><span class="chip" data-tip="Автотип: текст · 627 непустых">текст</span></div></th>
+          <th class="num"><div class="chipwrap"><span>Затрачено времени (ч)</span><span class="chip" data-tip="Автотип: число · 612 непустых · 15 пустых">число</span></div></th>
+          <th class="num"><div class="chipwrap"><span>Оценка</span><span class="chip" data-tip="Автотип: число · 559 непустых">число</span></div></th>
+          <th class="num"><div class="chipwrap"><span>Осталось (ч)</span><span class="chip" data-tip="Автотип: число · 480 непустых">число</span></div></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="marker">
+          <td>Релиз Q4</td><td></td><td></td><td></td><td></td><td></td><td class="num"></td><td class="num"></td><td class="num"></td>
+        </tr>
+        <tr>
+          <td></td><td>Задача</td><td>Интеграция выгрузки CRM</td><td>В работе</td><td>Иванова&nbsp;А.</td><td>Разработка</td><td class="num">12,5</td><td class="num">16</td><td class="num">3,5</td>
+        </tr>
+        <tr>
+          <td></td><td>Задача</td><td>Обновление отчётности</td><td>Готово</td><td>Петров&nbsp;С.</td><td>Документация</td><td class="num">8</td><td class="num">8</td><td class="num">0</td>
+        </tr>
+        <tr>
+          <td></td><td>Баг</td><td>Краш при импорте XLS</td><td>В очереди</td><td>Сидоров&nbsp;М.</td><td>Тестирование</td><td class="num">0</td><td class="num">4</td><td class="num">4</td>
+        </tr>
+        <tr>
+          <td></td><td>Задача</td><td>Настройка ролей доступа</td><td>В работе</td><td>Иванова&nbsp;А.</td><td>Разработка</td><td class="num">20</td><td class="num">24</td><td class="num">4</td>
+        </tr>
+        <tr>
+          <td></td><td>Баг</td><td>Ошибка подсчёта часов</td><td>Закрыт</td><td>Сидоров&nbsp;М.</td><td>Тестирование</td><td class="num">3,5</td><td class="num">4</td><td class="num">0,5</td>
+        </tr>
+        <tr>
+          <td></td><td>Задача</td><td>Сверка табелей</td><td>На ревью</td><td>Петров&nbsp;С.</td><td>Аналитика</td><td class="num">6</td><td class="num">8</td><td class="num">2</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="table-foot">
+      Показаны первые <span class="num">7</span> из <span class="num">627</span> строк ·
+      строка «Релиз Q4» — служебная, исключена · типы колонок определены автоматически
+    </div>
+  </div>
+</main>
+
+</body>
+</html>

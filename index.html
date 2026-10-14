@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Локальный анализ XLS/XLSX: графики и сводные таблицы без ручной работы в Excel."
+    />
+    <meta name="color-scheme" content="light dark" />
+    <title>XLS-Аналитика</title>
+    <script>
+      // Applied before first paint so a stored dark theme does not flash light.
+      // Keep the key in sync with `src/app/theme.ts`.
+      (function () {
+        try {
+          var stored = localStorage.getItem('xls-analytics-theme');
+          document.documentElement.setAttribute('data-theme', stored === 'dark' ? 'dark' : 'light');
+        } catch (error) {
+          document.documentElement.setAttribute('data-theme', 'light');
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <noscript>Для работы приложения требуется включённый JavaScript.</noscript>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
