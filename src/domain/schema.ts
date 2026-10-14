@@ -18,6 +18,19 @@ export const REQUIRED_COLUMNS = [
 export const SECTION_MARKER_COLUMN = 'Эпик';
 
 /**
+ * Filterable category columns (CAP-5): the contract's category set. «Задача» is an
+ * identifier, not a category, and numeric columns are never categories. Order is
+ * only for lookup — the UI orders options by their position in the sheet (AD-6).
+ */
+export const CATEGORY_COLUMNS = [
+  'Статус',
+  'Тип работы',
+  'Тип задачи',
+  'Исполнитель',
+  'Эпик',
+] as const;
+
+/**
  * Canonical header normalization: trim, collapse whitespace, case-fold, ё→е.
  * Applied to both the required set and every incoming header.
  */
@@ -37,3 +50,8 @@ export const NORMALIZED_REQUIRED: readonly string[] = REQUIRED_COLUMNS.map((colu
 );
 
 export const NORMALIZED_SECTION_MARKER = normalizeHeader(SECTION_MARKER_COLUMN);
+
+/** Normalized form of the filterable category set (`CATEGORY_COLUMNS`). */
+export const NORMALIZED_CATEGORY: readonly string[] = CATEGORY_COLUMNS.map((column) =>
+  normalizeHeader(column),
+);

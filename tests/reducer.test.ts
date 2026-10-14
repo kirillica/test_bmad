@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createIssue } from '../src/domain/issues';
-import type { Sheet, ValidationResult, Workbook } from '../src/domain/model';
+import type { FilterState, Sheet, ValidationResult, Workbook } from '../src/domain/model';
 import { initialState, reducer } from '../src/ui/store/reducer';
 
 const workbook: Workbook = { fileName: 'sample.xlsx', sheets: [], activeSheetName: '' };
@@ -70,5 +70,37 @@ describe('reducer', () => {
     let state = reducer(initialState, { type: 'LOAD_SUCCESS', workbook, validation });
     state = reducer(state, { type: 'RESET' });
     expect(state).toEqual(initialState);
+  });
+});
+
+describe('reducer filter state (AD-3)', () => {
+  const activeFilter: FilterState = { categories: { 'тип работы': ['Разработка'] } };
+
+  it('SET_FILTER stores the filter state', () => {
+    const state = reducer(loaded, { type: 'SET_FILTER', filterState: activeFilter });
+    expect(state.filterState).toBe(activeFilter);
+  });
+
+  it('CLEAR_FILTERS empties the filters', () => {
+    const filtered = reducer(loaded, { type: 'SET_FILTER', filterState: activeFilter });
+    const cleared = reducer(filtered, { type: 'CLEAR_FILTERS' });
+    expect(cleared.filterState.categories).toEqual({});
+  });
+
+  it('SET_SHEET clears filters when the sheet actually changes', () => {
+    const filtered = reducer(loaded, { type: 'SET_FILTER', filterState: activeFilter });
+    const switched = reducer(filtered, { type: 'SET_SHEET', sheetName: 'Итоги' });
+    expect(switched.filterState.categories).toEqual({});
+  });
+
+  it('SET_SHEET keeps filters on a no-op (same sheet)', () => {
+    const filtered = reducer(loaded, { type: 'SET_FILTER', filterState: activeFilter });
+    expect(reducer(filtered, { type: 'SET_SHEET', sheetName: 'Данные' })).toBe(filtered);
+  });
+
+  it('LOAD_SUCCESS clears filters left over from a previous file', () => {
+    const filtered = reducer(loaded, { type: 'SET_FILTER', filterState: activeFilter });
+    const next = reducer(filtered, { type: 'LOAD_SUCCESS', workbook, validation });
+    expect(next.filterState.categories).toEqual({});
   });
 });

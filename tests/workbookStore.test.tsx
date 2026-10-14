@@ -93,4 +93,41 @@ describe('WorkbookStoreProvider', () => {
     });
     expect(currentApi().state.workbook?.activeSheetName).toBe('Второй');
   });
+
+  it('derives filterOptions and rowSet, and clears filters on sheet switch (AD-3/AD-12)', async () => {
+    act(() => {
+      root.render(
+        <WorkbookStoreProvider>
+          <Probe />
+        </WorkbookStoreProvider>,
+      );
+    });
+
+    await act(async () => {
+      await currentApi().loadFile(fakeFile('multi.xlsx', xlsxBytes()));
+    });
+
+    const loaded = currentApi();
+    expect(loaded.rowSet.total).toBe(1);
+    // The fixture carries no data-row «Эпик» value, so that category has no
+    // available values and must not be offered (CAP-5, AD-14).
+    expect(loaded.filterOptions.categories.map((option) => option.header)).toEqual([
+      'Тип задачи',
+      'Статус',
+      'Исполнитель',
+      'Тип работы',
+    ]);
+    expect(loaded.filterOptions.date).toBeNull();
+
+    act(() => {
+      api?.setFilter({ categories: { статус: ['Готово'] } });
+    });
+    expect(currentApi().state.filterState.categories).toEqual({ статус: ['Готово'] });
+    expect(currentApi().rowSet.rows).toHaveLength(1);
+
+    act(() => {
+      currentApi().setActiveSheet('Второй');
+    });
+    expect(currentApi().state.filterState.categories).toEqual({});
+  });
 });

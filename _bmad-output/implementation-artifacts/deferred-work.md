@@ -29,3 +29,7 @@
 - source_spec: `_bmad-output/specs/spec-xls-analytics/stories/1-upload-and-structure-validation.md`
   summary: Accessibility is only partially addressed — focus-visible styles and reduced-motion were added, but a full audit (screen-reader announcement of the loading result, focus management after load) remains.
   evidence: `src/index.css` and `DropZone`/`UploadScreen` cover the basics only.
+
+- source_spec: `_bmad-output/specs/spec-xls-analytics/stories/3-filters-by-category-and-date.md`
+  summary: Date filtering mixes a UTC-parsed ISO date with local calendar-day extraction, so boundary-day rows can be off by one in timezones behind UTC.
+  evidence: `src/domain/pipeline/inferTypes.ts` `parseDateLike` returns `new Date('YYYY-MM-DD')` at UTC midnight, while `src/domain/pipeline/applyFilter.ts` `dayNumber` reads the day back with local getters and the `isoDayNumber` bounds are timezone-free. The reference sample has no date column, so the path is unverified against real data; the same parse already feeds the Story 2 preview formatting, so a fix must pick one calendar-day convention for display and filtering alike.

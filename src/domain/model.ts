@@ -67,6 +67,40 @@ export interface FilterState {
   dateRange?: { from: string; to: string };
 }
 
+/** Distinct non-empty values of one filterable category column (CAP-5). */
+export interface FilterOption {
+  /** Normalized header — the category key in `FilterState.categories` (AD-6). */
+  column: string;
+  /** Original header, shown on the chip. */
+  header: string;
+  /** Distinct values in first-seen order; comparison is normalization-based. */
+  values: string[];
+}
+
+/** The optional date filter controls; present only when a date column exists (AD-8). */
+export interface DateFilterOption {
+  /** Normalized header of the date column. */
+  column: string;
+  /** Original header of the date column. */
+  header: string;
+}
+
+/** Everything the filter bar needs to render: categories plus the optional date. */
+export interface FilterOptions {
+  categories: FilterOption[];
+  date: DateFilterOption | null;
+}
+
+/**
+ * The filtered slice every analytics view consumes (AD-8, AD-14). Marker-free by
+ * construction; `total` is the sheet's marker-free row count before filtering, so
+ * the UI can render «Показано X из Y».
+ */
+export interface RowSet {
+  rows: Row[];
+  total: number;
+}
+
 export interface ViewConfig {
   chartType: 'line' | 'bar' | 'pie' | 'table';
   dimension: string;

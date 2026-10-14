@@ -3,6 +3,28 @@ import { ROW_LIMIT } from '../../domain/schema';
 
 const ROW_LIMIT_TEXT = ROW_LIMIT.toLocaleString('ru-RU');
 
+const numberFormat = new Intl.NumberFormat('ru-RU');
+
+/** Russian plural for "строка" agreeing with the cardinal (1/2/5). */
+function pluralRows(count: number): string {
+  const mod10 = count % 10;
+  const mod100 = count % 100;
+  if (mod10 === 1 && mod100 !== 11) return 'строка';
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'строки';
+  return 'строк';
+}
+
+/**
+ * Russian genitive plural for «строк» after «из»: «строки» only for counts whose
+ * last digit is 1 (but not the teens), otherwise «строк» (`из 21 строки`).
+ */
+function pluralRowsGenitive(count: number): string {
+  const mod10 = count % 10;
+  const mod100 = count % 100;
+  if (mod10 === 1 && mod100 !== 11) return 'строки';
+  return 'строк';
+}
+
 /** Russian plural for "значение" agreeing with the cardinal (1/2/5). */
 function pluralValues(count: number): string {
   const mod10 = count % 10;
@@ -22,6 +44,22 @@ export const ru = {
   themeToDark: 'Тёмная тема',
   screenTitle: 'Загрузка данных',
   dataTitle: 'Данные',
+  analysisTitle: 'Анализ',
+  dataTab: 'Данные',
+  analysisTab: 'Анализ',
+  surfacesLabel: 'Разделы',
+  filtersLabel: 'Фильтры',
+  filterValuesLabel: (header: string) => `Значения: ${header}`,
+  selectedCount: (count: number) => `выбрано: ${count}`,
+  clearFilters: 'Сбросить',
+  resetFilters: 'Сбросить фильтры',
+  noRowsForFilters: 'Нет строк по фильтрам',
+  rowsCount: (count: number) => `${numberFormat.format(count)} ${pluralRows(count)}`,
+  filteredRowsCount: (shown: number, total: number) =>
+    `Показано ${numberFormat.format(shown)} из ${numberFormat.format(total)} ${pluralRowsGenitive(total)}`,
+  dateSectionLabel: 'Дата',
+  dateFrom: 'с',
+  dateTo: 'по',
   sheetsLabel: 'Листы файла',
   emptySheet: 'Лист пуст',
   chooseFile: 'Выбрать файл',

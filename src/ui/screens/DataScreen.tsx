@@ -1,6 +1,7 @@
 import type { HTMLAttributes } from 'react';
 import { useState } from 'react';
-import type { CellValue, Column, Row, Sheet } from '../../domain/model';
+import type { CellValue, Column } from '../../domain/model';
+import { dataRows } from '../../domain/pipeline/applyFilter';
 import { parseDateLike } from '../../domain/pipeline/inferTypes';
 import { ErrorBanner } from '../components/ErrorBanner';
 import { Pagination } from '../components/Pagination';
@@ -10,6 +11,7 @@ import { TypeChip } from '../components/TypeChip';
 import { WarningBanner } from '../components/WarningBanner';
 import { ru } from '../i18n/ru';
 import { useWorkbookStore } from '../store/context';
+import { selectActiveSheet } from '../../domain/pipeline/selectActiveSheet';
 
 /** Rows shown per preview page (Design Notes: 50). */
 const PAGE_SIZE = 50;
@@ -32,11 +34,6 @@ function formatCell(value: CellValue | undefined): string {
   return parsed ? dateFormat.format(parsed) : value;
 }
 
-/** Data rows of a sheet, excluding service-marker rows (AD-14). */
-function dataRows(sheet: Sheet): Row[] {
-  return sheet.rows.filter((row) => !row.isSectionMarker);
-}
-
 /**
  * U2 «Данные» (CAP-3): paginated preview of the active sheet, visible-sheet
  * tabs, and the auto-detected type chip of every column. Section-marker rows are
@@ -49,10 +46,7 @@ export function DataScreen() {
   if (!workbook) return null;
 
   const visibleSheets = workbook.sheets.filter((sheet) => !sheet.hidden);
-  const activeSheet =
-    workbook.sheets.find((sheet) => sheet.name === workbook.activeSheetName) ??
-    visibleSheets[0] ??
-    workbook.sheets[0];
+  const activeSheet = selectActiveSheet(workbook);
   if (!activeSheet) return null;
 
   const rows = dataRows(activeSheet);
