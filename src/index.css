@@ -261,10 +261,53 @@ body {
   border-radius: 12px;
 }
 
-.preview-note {
-  margin: 0;
-  color: var(--text-muted);
+.pagination {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
   font-size: 13px;
+  color: var(--text-muted);
+}
+
+.pagination-button {
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 4px 12px;
+  font-size: 13px;
+}
+
+.pagination-button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.pagination-button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.pagination-range,
+.pagination-jump {
+  margin: 0;
+}
+
+.pagination-jump {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pagination-input {
+  width: 64px;
+  padding: 4px 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
 }
 
 .data-header {

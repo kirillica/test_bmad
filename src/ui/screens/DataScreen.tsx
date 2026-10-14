@@ -1,7 +1,9 @@
 import type { HTMLAttributes } from 'react';
+import { useState } from 'react';
 import type { CellValue, Column, Row, Sheet } from '../../domain/model';
 import { parseDateLike } from '../../domain/pipeline/inferTypes';
 import { ErrorBanner } from '../components/ErrorBanner';
+import { Pagination } from '../components/Pagination';
 import { SheetTabs } from '../components/SheetTabs';
 import { SHEET_PANEL_ID, sheetTabId } from '../components/sheetTabsIds';
 import { TypeChip } from '../components/TypeChip';
@@ -9,8 +11,8 @@ import { WarningBanner } from '../components/WarningBanner';
 import { ru } from '../i18n/ru';
 import { useWorkbookStore } from '../store/context';
 
-/** Preview shows the first rows of the active sheet (Design Notes: 50). */
-const PREVIEW_ROW_LIMIT = 50;
+/** Rows shown per preview page (Design Notes: 50). */
+const PAGE_SIZE = 50;
 
 const numberFormat = new Intl.NumberFormat('ru-RU');
 const dateFormat = new Intl.DateTimeFormat('ru-RU', {
@@ -36,12 +38,13 @@ function dataRows(sheet: Sheet): Row[] {
 }
 
 /**
- * U2 «Данные» (CAP-3): preview of the active sheet, visible-sheet tabs, and the
- * auto-detected type chip of every column. Section-marker rows are excluded from
- * the preview (AD-14); the source workbook is never mutated (AD-16).
+ * U2 «Данные» (CAP-3): paginated preview of the active sheet, visible-sheet
+ * tabs, and the auto-detected type chip of every column. Section-marker rows are
+ * excluded from the preview (AD-14); the source workbook is never mutated (AD-16).
  */
 export function DataScreen() {
   const { state, setActiveSheet } = useWorkbookStore();
+  const [page, setPage] = useState(1);
   const workbook = state.workbook;
   if (!workbook) return null;
 
@@ -53,8 +56,20 @@ export function DataScreen() {
   if (!activeSheet) return null;
 
   const rows = dataRows(activeSheet);
-  const previewRows = rows.slice(0, PREVIEW_ROW_LIMIT);
-  const isEmpty = rows.length === 0;
+  const total = rows.length;
+  const isEmpty = total === 0;
+
+  // Clamp on read so a stale page (e.g. after a shorter sheet) never renders empty.
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const safePage = Math.min(Math.max(page, 1), pageCount);
+  const pageRows = rows.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  // Switching sheets is a new context: always start from its first page.
+  const handleSelectSheet = (sheetName: string) => {
+    if (sheetName === activeSheet.name) return;
+    setActiveSheet(sheetName);
+    setPage(1);
+  };
 
   // The tabs and their controlled panel are only a tablist when >1 sheet shows.
   const hasTabs = visibleSheets.length > 1;
@@ -79,7 +94,7 @@ export function DataScreen() {
       <SheetTabs
         sheets={workbook.sheets}
         activeSheetName={activeSheet.name}
-        onSelect={setActiveSheet}
+        onSelect={handleSelectSheet}
       />
 
       <div id={SHEET_PANEL_ID} className="data-panel" {...panelProps}>
@@ -100,7 +115,7 @@ export function DataScreen() {
                   </tr>
                 </thead>
                 <tbody>
-                  {previewRows.map((row) => (
+                  {pageRows.map((row) => (
                     <tr key={row.index}>
                       {activeSheet.columns.map((column: Column) => (
                         <td
@@ -116,8 +131,14 @@ export function DataScreen() {
               </table>
             </div>
 
-            {rows.length > PREVIEW_ROW_LIMIT ? (
-              <p className="preview-note">{ru.previewTruncated(PREVIEW_ROW_LIMIT, rows.length)}</p>
+            {pageCount > 1 ? (
+              <Pagination
+                page={safePage}
+                pageCount={pageCount}
+                pageSize={PAGE_SIZE}
+                total={total}
+                onPageChange={(next) => setPage(next)}
+              />
             ) : null}
           </>
         )}

@@ -35,7 +35,12 @@ export const ru = {
   fixAndRetry: 'Проверьте структуру файла и загрузите снова.',
   sheetsCount: (count: number) => `Листов: ${count}`,
   unnamedColumn: (n: number) => `Колонка ${n}`,
-  previewTruncated: (shown: number, total: number) => `Показаны первые ${shown} из ${total} строк`,
+  paginationLabel: 'Постраничная навигация',
+  prevPage: 'Назад',
+  nextPage: 'Вперёд',
+  goToPage: 'Страница',
+  pageOf: (count: number) => `из ${count}`,
+  rowsRange: (from: string, to: string, total: string) => `Строки ${from}–${to} из ${total}`,
   columnTypes: {
     number: 'число',
     date: 'дата',

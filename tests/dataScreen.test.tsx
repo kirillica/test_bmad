@@ -76,6 +76,23 @@ function manyRowsWorkbook(count: number): Workbook {
   return analyzeWorkbook(makeWorkbook([makeSheet(rows, { name: 'Большой' })])).workbook;
 }
 
+/** Two visible sheets, each longer than one page, for the page-reset check. */
+function longSheetsWorkbook(count = 120): Workbook {
+  const build = (prefix: string): CellValue[][] => {
+    const rows: CellValue[][] = [[...HEADERS]];
+    for (let index = 0; index < count; index += 1) {
+      rows.push(rowFor(HEADERS, { ...TASK_ROW, Задача: `${prefix} ${index}` }));
+    }
+    return rows;
+  };
+  return analyzeWorkbook(
+    makeWorkbook([
+      makeSheet(build('A'), { name: 'Первый' }),
+      makeSheet(build('B'), { name: 'Второй' }),
+    ]),
+  ).workbook;
+}
+
 /** A date column holding date-like strings, not Date objects. */
 function stringDateWorkbook(): Workbook {
   const rows: CellValue[][] = [
@@ -189,6 +206,28 @@ function tabs(): Element[] {
   return Array.from(container.querySelectorAll('.sheet-tab'));
 }
 
+function paginationButton(label: string): HTMLButtonElement | undefined {
+  return Array.from(container.querySelectorAll<HTMLButtonElement>('.pagination-button')).find(
+    (element) => element.textContent === label,
+  );
+}
+
+function pageInput(): HTMLInputElement | null {
+  return container.querySelector<HTMLInputElement>('.pagination-input');
+}
+
+/** Types a page number and commits it with Enter, like a user would. */
+function jumpToPage(value: string): void {
+  const input = pageInput();
+  if (!input) return;
+  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+  act(() => {
+    setter?.call(input, value);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  press(input, 'Enter');
+}
+
 describe('DataScreen (U2)', () => {
   it('HAPPY_PATH: previews the active sheet, chips types and shows warnings', () => {
     render(
@@ -264,10 +303,52 @@ describe('DataScreen (U2)', () => {
     expect(container.textContent).toContain('Лист пуст');
   });
 
-  it('PREVIEW_LIMIT: truncation is limited to 50 rows and announced', () => {
-    render(<Harness initial={manyRowsWorkbook(60)} />);
+  it('PAGINATION: a long sheet is split into pages of 50 with a row range', () => {
+    render(<Harness initial={manyRowsWorkbook(626)} />);
+
     expect(container.querySelectorAll('.data-table tbody tr')).toHaveLength(50);
-    expect(container.textContent).toContain('Показаны первые 50 из 60 строк');
+    expect(container.textContent).toContain('Строки 1–50 из 626');
+    expect(container.textContent).toContain('из 13');
+    expect(pageInput()?.value).toBe('1');
+  });
+
+  it('PAGINATION: the next page continues the range', () => {
+    render(<Harness initial={manyRowsWorkbook(626)} />);
+
+    const next = paginationButton('Вперёд');
+    if (next) click(next);
+
+    expect(container.querySelectorAll('.data-table tbody tr')).toHaveLength(50);
+    expect(container.textContent).toContain('Строки 51–100 из 626');
+  });
+
+  it('PAGINATION: the last page shows the remainder and disables «Вперёд»', () => {
+    render(<Harness initial={manyRowsWorkbook(626)} />);
+
+    jumpToPage('13');
+
+    expect(container.querySelectorAll('.data-table tbody tr')).toHaveLength(26);
+    expect(container.textContent).toContain('Строки 601–626 из 626');
+    expect(paginationButton('Вперёд')?.disabled).toBe(true);
+  });
+
+  it('PAGINATION: switching sheets resets to the first page', () => {
+    render(<Harness initial={longSheetsWorkbook()} />);
+
+    const next = paginationButton('Вперёд');
+    if (next) click(next);
+    expect(container.textContent).toContain('Строки 51–100 из 120');
+
+    const second = tabs().find((tab) => tab.textContent === 'Второй');
+    if (second) click(second);
+
+    expect(container.textContent).toContain('Строки 1–50 из 120');
+    expect(pageInput()?.value).toBe('1');
+  });
+
+  it('PAGINATION: a sheet shorter than one page renders no controls', () => {
+    render(<Harness initial={previewWorkbook()} />);
+    expect(container.querySelector('.pagination')).toBeNull();
   });
 
   it('ARIA: the preview is a tabpanel labelled by the active tab', () => {
