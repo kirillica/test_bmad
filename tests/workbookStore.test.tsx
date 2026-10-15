@@ -102,6 +102,7 @@ describe('WorkbookStoreProvider', () => {
       );
     });
     expect(currentApi().state.workbook).toBeNull();
+    expect(currentApi().activeSheet).toBeNull();
 
     await act(async () => {
       await currentApi().loadFile(fakeFile('multi.xlsx', xlsxBytes()));
@@ -110,11 +111,14 @@ describe('WorkbookStoreProvider', () => {
     const loaded = currentApi().state.workbook;
     expect(loaded?.sheets.map((sheet) => sheet.name)).toEqual(['Первый', 'Второй']);
     expect(loaded?.activeSheetName).toBe('Первый');
+    // The derived active sheet travels with the store (AD-12), so U3 can export it.
+    expect(currentApi().activeSheet?.name).toBe('Первый');
 
     act(() => {
       currentApi().setActiveSheet('Второй');
     });
     expect(currentApi().state.workbook?.activeSheetName).toBe('Второй');
+    expect(currentApi().activeSheet?.name).toBe('Второй');
 
     // The real reducer guard: an unknown sheet name is ignored.
     act(() => {

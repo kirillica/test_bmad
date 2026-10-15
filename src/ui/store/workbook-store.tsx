@@ -110,6 +110,7 @@ export function WorkbookStoreProvider({ children }: { children: ReactNode }) {
   const value = useMemo<StoreApi>(
     () => ({
       state,
+      activeSheet,
       rowSet,
       filterOptions,
       viewOptions,
@@ -124,6 +125,7 @@ export function WorkbookStoreProvider({ children }: { children: ReactNode }) {
     }),
     [
       state,
+      activeSheet,
       rowSet,
       filterOptions,
       viewOptions,

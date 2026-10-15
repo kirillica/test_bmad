@@ -10,12 +10,15 @@ export interface ChartPalette {
   colors: string[];
   text: string;
   grid: string;
+  /** Opaque surface behind the chart — the background of PNG/PDF snapshots (AD-19). */
+  surface: string;
 }
 
 export const FALLBACK_PALETTE: ChartPalette = {
   colors: ['#2f6fed', '#e08a1e', '#2e9e6b', '#8b5cf6', '#d64545', '#0f8fa8'],
   text: '#1c2024',
   grid: '#d8dde3',
+  surface: '#ffffff',
 };
 
 /** Reads the chart palette from the document (or the given element) right now. */
@@ -34,6 +37,7 @@ export function readChartPalette(root?: HTMLElement): ChartPalette {
     ),
     text: read('--text', FALLBACK_PALETTE.text),
     grid: read('--border', FALLBACK_PALETTE.grid),
+    surface: read('--surface', FALLBACK_PALETTE.surface),
   };
 }
 

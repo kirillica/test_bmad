@@ -40,11 +40,29 @@ interface XlsxWorkbook {
 
 interface XlsxModule {
   read: (data: ArrayBuffer, options: Record<string, unknown>) => XlsxWorkbook;
+  write: (
+    workbook: XlsxWorkbook,
+    options: { type: 'array'; bookType: 'xlsx' },
+  ) => ArrayBuffer;
   utils: {
     decode_range: (ref: string) => XlsxRange;
     encode_cell: (address: { r: number; c: number }) => string;
+    aoa_to_sheet: (rows: XlsxWriteCell[][]) => XlsxWorksheet;
+    book_new: () => XlsxWorkbook;
+    book_append_sheet: (workbook: XlsxWorkbook, worksheet: XlsxWorksheet, name: string) => void;
   };
 }
+
+/** A cell a writer may emit: a number Excel computes, an ISO string, or an empty cell. */
+export type XlsxWriteCell = string | number | null;
+
+/** One sheet to write: its name and its row-major cells. */
+export interface XlsxSheetSpec {
+  name: string;
+  rows: XlsxWriteCell[][];
+}
+
+const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
 export interface ParseOptions {
   /** Row limit the read cap is derived from. Overridable for tests. */
@@ -105,4 +123,19 @@ export async function parseWorkbook(
   });
 
   return { fileName, sheets };
+}
+
+/**
+ * Builds an `.xlsx` `Blob` from sheet specs (AD-10). Lazy `import('xlsx')` keeps
+ * the full build out of the initial bundle (AD-20); this is the single SheetJS
+ * write point, mirroring `parseWorkbook` on the read side.
+ */
+export async function writeWorkbook(sheets: XlsxSheetSpec[]): Promise<Blob> {
+  const XLSX = (await import('xlsx')) as unknown as XlsxModule;
+  const workbook = XLSX.utils.book_new();
+  for (const sheet of sheets) {
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(sheet.rows), sheet.name);
+  }
+  const bytes = XLSX.write(workbook, { type: 'array', bookType: 'xlsx' });
+  return new Blob([bytes], { type: XLSX_MIME });
 }

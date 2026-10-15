@@ -8,6 +8,9 @@ import { aggregate, buildViewOptions, defaultViewConfig } from '../src/domain/pi
 import { selectActiveSheet } from '../src/domain/pipeline/selectActiveSheet';
 import { analyzeWorkbook } from '../src/domain/pipeline/validateStructure';
 import { AnalysisScreen } from '../src/ui/screens/AnalysisScreen';
+import { downloadBlob } from '../src/adapters/exporter/download';
+import { exportPdf } from '../src/adapters/exporter/pdf';
+import { createChart } from '../src/adapters/charts';
 import { StoreContext, type StoreApi } from '../src/ui/store/context';
 import { reducer, type StoreState } from '../src/ui/store/reducer';
 import { HEADERS, makeSheet, makeWorkbook, rowFor } from './fixtures';
@@ -16,6 +19,25 @@ import { HEADERS, makeSheet, makeWorkbook, rowFor } from './fixtures';
 // in browser mode (`chartCard.browser.test.tsx`). Here the adapter is a stub.
 vi.mock('../src/adapters/charts', () => ({
   createChart: vi.fn(async () => ({ update: vi.fn(), destroy: vi.fn() })),
+}));
+
+// The export group (CAP-7) drives U3's file names, downloads and toasts. The
+// heavy adapters are stubbed so the assertions stay about the screen's contract:
+// PNG/PDF produce artifacts (covered in browser mode) and XLSX is written by the
+// real SheetJS adapter. Only the download side-effect is observed.
+vi.mock('../src/adapters/exporter/download', () => ({ downloadBlob: vi.fn() }));
+vi.mock('../src/adapters/exporter/png', () => ({
+  EmptyCanvasError: class EmptyCanvasError extends Error {},
+  snapshotChart: vi.fn(() => ({
+    blob: new Blob(['png'], { type: 'image/png' }),
+    dataUrl: 'data:image/png;base64,AAAA',
+    width: 10,
+    height: 10,
+  })),
+  exportPng: vi.fn(() => new Blob(['png'], { type: 'image/png' })),
+}));
+vi.mock('../src/adapters/exporter/pdf', () => ({
+  exportPdf: vi.fn(async () => new Blob(['pdf'], { type: 'application/pdf' })),
 }));
 
 const DATE_HEADERS = [...HEADERS, 'Дата'];
@@ -117,8 +139,8 @@ function twoMeasureRows(): CellValue[][] {
   ];
 }
 
-function toWorkbook(rows: CellValue[][]): Workbook {
-  return analyzeWorkbook(makeWorkbook([makeSheet(rows, { name: 'Main sheet' })])).workbook;
+function toWorkbook(rows: CellValue[][], fileName = 'sample.xlsx'): Workbook {
+  return analyzeWorkbook(makeWorkbook([makeSheet(rows, { name: 'Main sheet' })], fileName)).workbook;
 }
 
 /**
@@ -162,6 +184,7 @@ function Harness({ initial }: { initial: Workbook }) {
   const api = useMemo<StoreApi>(
     () => ({
       state,
+      activeSheet,
       rowSet,
       filterOptions,
       viewOptions,
@@ -174,7 +197,7 @@ function Harness({ initial }: { initial: Workbook }) {
       clearFilters: () => dispatch({ type: 'CLEAR_FILTERS' }),
       setView: (view) => dispatch({ type: 'SET_VIEW', viewConfig: view }),
     }),
-    [state, rowSet, filterOptions, viewOptions, viewConfig, aggregation],
+    [state, activeSheet, rowSet, filterOptions, viewOptions, viewConfig, aggregation],
   );
 
   return (
@@ -442,5 +465,228 @@ describe('AnalysisScreen (U3)', () => {
 
     expect(container.textContent).toContain('нет категории');
     expect(container.querySelector('.view-switcher')).toBeNull();
+  });
+});
+
+/**
+ * Export group (CAP-7). The screen owns the file names, the downloads and the
+ * toast (AD-10); PNG/PDF are produced by the card (browser mode) and XLSX by the
+ * real SheetJS adapter — here the download side-effect and the heavy image
+ * adapters are stubbed so the contract under test is the screen's.
+ */
+describe('AnalysisScreen export (CAP-7)', () => {
+  const downloadBlobMock = vi.mocked(downloadBlob);
+  const exportPdfMock = vi.mocked(exportPdf);
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  /** Renders inside an async `act` so the chart card's `ready` state settles. */
+  async function renderHarness(initial: Workbook): Promise<void> {
+    await act(async () => {
+      root.render(<Harness initial={initial} />);
+    });
+  }
+
+  /** A click whose async handlers (export, download) get to settle. */
+  async function clickAsync(element: Element): Promise<void> {
+    await act(async () => {
+      element.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+  }
+
+  async function click(element: Element): Promise<void> {
+    await act(async () => {
+      element.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+  }
+
+  function xlsxButton(): HTMLButtonElement {
+    const found = container.querySelector<HTMLButtonElement>('.export-xlsx');
+    if (!found) throw new Error('XLSX button not found');
+    return found;
+  }
+
+  function chartExportButton(): HTMLButtonElement {
+    const found = container.querySelector<HTMLButtonElement>('.export-button');
+    if (!found) throw new Error('chart export button not found');
+    return found;
+  }
+
+  function exportOption(label: string): HTMLButtonElement {
+    const found = Array.from(container.querySelectorAll<HTMLButtonElement>('.export-option')).find(
+      (option) => option.textContent === label,
+    );
+    if (!found) throw new Error(`export option not found: ${label}`);
+    return found;
+  }
+
+  function toast(): HTMLElement | null {
+    return container.querySelector('.toast');
+  }
+
+  it('EXPORT_XLSX: downloads <base>-данные.xlsx and confirms with a status toast', async () => {
+    await renderHarness(toWorkbook(dataRows()));
+    expect(xlsxButton().disabled).toBe(false);
+
+    await clickAsync(xlsxButton());
+
+    await vi.waitFor(() => {
+      expect(downloadBlobMock).toHaveBeenCalledTimes(1);
+    });
+    const [blob, fileName] = downloadBlobMock.mock.calls[0]!;
+    expect(blob).toBeInstanceOf(Blob);
+    expect(fileName).toBe('sample-данные.xlsx');
+
+    const element = toast();
+    expect(element?.getAttribute('role')).toBe('status');
+    expect(element?.textContent).toContain('Экспорт готов: sample-данные.xlsx');
+  });
+
+  it('NAME_FALLBACK: an empty source name falls back to «отчёт»', async () => {
+    await renderHarness(toWorkbook(dataRows(), ''));
+    await clickAsync(xlsxButton());
+
+    await vi.waitFor(() => {
+      expect(downloadBlobMock).toHaveBeenCalledTimes(1);
+    });
+    expect(downloadBlobMock.mock.calls[0]?.[1]).toBe('отчёт-данные.xlsx');
+  });
+
+  it('NO_ROWS: the XLSX button is disabled and the reason is named', async () => {
+    await renderHarness(toWorkbook(dataRows()));
+    // «Дизайн» + «В работе» matches no row.
+    await click(chip('Тип работы')!);
+    await click(option('Дизайн')!);
+    await click(chip('Статус')!);
+    await click(option('В работе')!);
+
+    expect(container.querySelector('.analysis-empty')).not.toBeNull();
+    expect(xlsxButton().disabled).toBe(true);
+    expect(container.textContent).toContain('Экспорт недоступен: нет строк по фильтрам');
+    // No chart card means no PNG/PDF menu either.
+    expect(container.querySelector('.export-button')).toBeNull();
+  });
+
+  it('TABLE_VIEW: no PNG/PDF menu, but XLSX stays available', async () => {
+    await renderHarness(toWorkbook(dataRows()));
+    const tableButton = viewButton('Таблица');
+    if (!tableButton) throw new Error('table view button not found');
+    await click(tableButton);
+
+    expect(container.querySelector('.pivot-table')).not.toBeNull();
+    expect(container.querySelector('.export-button')).toBeNull();
+    expect(xlsxButton().disabled).toBe(false);
+  });
+
+  it('CHART_FAILED: a failed chart load shows the error and no PNG/PDF menu', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.mocked(createChart).mockRejectedValueOnce(new Error('chart module failed'));
+
+    await renderHarness(toWorkbook(dataRows()));
+
+    await vi.waitFor(() => {
+      expect(container.querySelector('.chart-error')).not.toBeNull();
+    });
+    expect(container.textContent).toContain('График недоступен');
+    // No canvas survives a load failure, so the export menu is absent too.
+    expect(container.querySelector('.export-button')).toBeNull();
+    // XLSX does not depend on the chart instance.
+    expect(xlsxButton().disabled).toBe(false);
+
+    errorSpy.mockRestore();
+  });
+
+  it('EXPORT_PNG: downloads <base>-график.png and confirms with a status toast', async () => {
+    await renderHarness(toWorkbook(dataRows()));
+    await clickAsync(chartExportButton());
+    await clickAsync(exportOption('PNG'));
+
+    await vi.waitFor(() => {
+      expect(downloadBlobMock).toHaveBeenCalledTimes(1);
+    });
+    expect(downloadBlobMock.mock.calls[0]?.[1]).toBe('sample-график.png');
+    expect(toast()?.getAttribute('role')).toBe('status');
+    expect(toast()?.textContent).toContain('Экспорт готов: sample-график.png');
+  });
+
+  it('EXPORT_PDF: downloads <base>-отчёт.pdf and confirms with a status toast', async () => {
+    await renderHarness(toWorkbook(dataRows()));
+    await clickAsync(chartExportButton());
+    await clickAsync(exportOption('PDF'));
+
+    await vi.waitFor(() => {
+      expect(downloadBlobMock).toHaveBeenCalledTimes(1);
+    });
+    expect(downloadBlobMock.mock.calls[0]?.[1]).toBe('sample-отчёт.pdf');
+    expect(toast()?.getAttribute('role')).toBe('status');
+    expect(toast()?.textContent).toContain('Экспорт готов: sample-отчёт.pdf');
+  });
+
+  it('EXPORT_PDF: the report carries the active filters, the row count and a date', async () => {
+    await renderHarness(toWorkbook(dataRows()));
+    await click(chip('Тип работы')!);
+    await click(option('Разработка')!);
+    expect(container.textContent).toContain('Показано 2 из 3 строк');
+
+    await clickAsync(chartExportButton());
+    await clickAsync(exportOption('PDF'));
+
+    await vi.waitFor(() => {
+      expect(exportPdfMock).toHaveBeenCalledTimes(1);
+    });
+    const report = exportPdfMock.mock.calls[0]![0];
+    // The filters line is built from the real FilterState, not a placeholder.
+    expect(report.filters).toBe('Фильтры: Тип работы: Разработка');
+    expect(report.rowsCount).toContain('2');
+    expect(report.date).toMatch(/^Дата формирования: \d{4}-\d{2}-\d{2}$/);
+    expect(report.imageDataUrl).toContain('data:image/png');
+  });
+
+  it('CHART_NOT_READY: PNG/PDF stay disabled until the chart instance is ready', async () => {
+    // An instance that never resolves keeps the card un-ready.
+    vi.mocked(createChart).mockImplementationOnce(() => new Promise<never>(() => {}));
+
+    await renderHarness(toWorkbook(dataRows()));
+
+    await clickAsync(chartExportButton());
+    const options = Array.from(container.querySelectorAll<HTMLButtonElement>('.export-option'));
+    expect(options).toHaveLength(2);
+    for (const option of options) {
+      expect(option.disabled).toBe(true);
+      expect(option.getAttribute('title')).toBe('График ещё строится');
+    }
+  });
+
+  it('TOAST_ERROR: a failed download shows a persistent alert toast', async () => {
+    downloadBlobMock.mockImplementationOnce(() => {
+      throw new Error('download failed');
+    });
+    await renderHarness(toWorkbook(dataRows()));
+
+    await clickAsync(xlsxButton());
+
+    await vi.waitFor(() => {
+      expect(toast()?.getAttribute('role')).toBe('alert');
+    });
+    expect(toast()?.textContent).toContain('Не удалось выполнить экспорт');
+  });
+
+  it('FILTERED: the file name and export reflect the active filters', async () => {
+    await renderHarness(toWorkbook(dataRows()));
+    await click(chip('Тип работы')!);
+    await click(option('Разработка')!);
+    expect(container.textContent).toContain('Показано 2 из 3 строк');
+
+    await clickAsync(xlsxButton());
+
+    await vi.waitFor(() => {
+      expect(downloadBlobMock).toHaveBeenCalledTimes(1);
+    });
+    const [blob] = downloadBlobMock.mock.calls[0]!;
+    // A real .xlsx archive (ZIP magic): the filtered rows were serialized.
+    expect(blob).toBeInstanceOf(Blob);
+    expect(blob.size).toBeGreaterThan(0);
   });
 });

@@ -10,6 +10,18 @@ export function formatNumber(value: number): string {
   return numberFormat.format(value);
 }
 
+/**
+ * Formats a `Date` as ISO 8601 `YYYY-MM-DD` from its local parts (AD-9). Used for
+ * the PDF's generation date so it matches the user's calendar and the ISO date
+ * bounds in the same report.
+ */
+export function formatIsoDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 /** Russian plural for "строка" agreeing with the cardinal (1/2/5). */
 function pluralRows(count: number): string {
   const mod10 = count % 10;
@@ -124,6 +136,27 @@ export const ru = {
     `${view}, ${measure} по «${dimension}» — ${pluralGroups(groups)}`,
   // Shown in place of the canvas when the lazy Chart.js chunk fails to load.
   chartError: 'График недоступен: не удалось загрузить модуль графиков.',
+  // Export (CAP-7): the chart menu, the XLSX button, file names, PDF report
+  // lines and the toasts. Components never hardcode this copy.
+  exportMenuLabel: 'Экспорт…',
+  exportPng: 'PNG',
+  exportPdf: 'PDF',
+  exportXlsx: 'Экспорт XLSX',
+  exportChartNotReady: 'График ещё строится',
+  exportBlockedNoRows: 'Экспорт недоступен: нет строк по фильтрам',
+  exportBlockedNoView: 'Экспорт недоступен: представление не построено',
+  exportPngSuffix: 'график',
+  exportPdfSuffix: 'отчёт',
+  exportXlsxSuffix: 'данные',
+  exportFallbackName: 'отчёт',
+  exportSheetData: 'Данные',
+  exportSheetPivot: 'Сводная',
+  exportNoFilters: 'не заданы',
+  exportFiltersLabel: (text: string) => `Фильтры: ${text}`,
+  exportDateLabel: (date: string) => `Дата формирования: ${date}`,
+  exportReady: (file: string) => `Экспорт готов: ${file}`,
+  exportError: 'Не удалось выполнить экспорт',
+  toastClose: 'Закрыть',
 };
 
 export function messageForIssue(issue: Issue): string {

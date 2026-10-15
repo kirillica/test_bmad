@@ -150,6 +150,7 @@ function Harness({
   const api = useMemo<StoreApi>(
     () => ({
       state,
+      activeSheet: null,
       rowSet: { rows: [], total: 0 },
       filterOptions: { categories: [], date: null },
       viewOptions: { dimensions: [], measures: [] },

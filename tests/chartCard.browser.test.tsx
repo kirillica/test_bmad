@@ -3,7 +3,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Chart } from 'chart.js/auto';
 import type { AggregationResult } from '../src/domain/model';
-import { ChartCard } from '../src/ui/components/ChartCard';
+import { ChartCard, type ChartExportResult } from '../src/ui/components/ChartCard';
 
 /**
  * The real Chart.js lifecycle can only run in a browser: jsdom has no `<canvas>`.
@@ -49,6 +49,15 @@ function kindOf(canvas: HTMLCanvasElement): string | undefined {
   return (Chart.getChart(canvas)?.config as { type?: string } | undefined)?.type;
 }
 
+const PDF_TEXTS = {
+  filters: 'Фильтры: не заданы',
+  rowsCount: '2 строки',
+  date: '2026-10-15',
+};
+
+/** A no-op result sink; export tests capture into their own spy instead. */
+function noopResult(): void {}
+
 function render(chartType: 'line' | 'bar' | 'pie', aggregation: AggregationResult): void {
   act(() => {
     root.render(
@@ -57,6 +66,8 @@ function render(chartType: 'line' | 'bar' | 'pie', aggregation: AggregationResul
         aggregation={aggregation}
         dimensionHeader="Исполнитель"
         measureHeader="Затрачено времени (ч)"
+        pdfTexts={PDF_TEXTS}
+        onExportResult={noopResult}
       />,
     );
   });
@@ -72,6 +83,8 @@ describe('ChartCard (browser, AD-19)', () => {
             aggregation={AGGREGATION}
             dimensionHeader="Исполнитель"
             measureHeader="Затрачено времени (ч)"
+            pdfTexts={PDF_TEXTS}
+            onExportResult={noopResult}
           />
         </StrictMode>,
       );
@@ -96,6 +109,8 @@ describe('ChartCard (browser, AD-19)', () => {
           aggregation={AGGREGATION}
           dimensionHeader="Исполнитель"
           measureHeader="Затрачено времени (ч)"
+          pdfTexts={PDF_TEXTS}
+          onExportResult={noopResult}
         />,
       );
     });
@@ -204,5 +219,98 @@ describe('ChartCard (browser, AD-19)', () => {
     await vi.waitFor(() => {
       expect(Chart.getChart(canvas)).toBeUndefined();
     });
+  });
+});
+
+const PNG_MAGIC = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+
+/** Export reads the live canvas and reports the artifact through the prop. */
+describe('ChartCard export (browser, CAP-7)', () => {
+  function click(element: Element): void {
+    act(() => {
+      element.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+  }
+
+  function menuButton(): HTMLButtonElement {
+    const found = container.querySelector<HTMLButtonElement>('.export-button');
+    if (!found) throw new Error('export button not found');
+    return found;
+  }
+
+  function optionByLabel(label: string): HTMLButtonElement | undefined {
+    return Array.from(container.querySelectorAll<HTMLButtonElement>('.export-option')).find(
+      (option) => option.textContent === label,
+    );
+  }
+
+  function renderWithResult(onExportResult: (result: ChartExportResult) => void): void {
+    act(() => {
+      root.render(
+        <ChartCard
+          chartType="bar"
+          aggregation={AGGREGATION}
+          dimensionHeader="Исполнитель"
+          measureHeader="Затрачено времени (ч)"
+          pdfTexts={PDF_TEXTS}
+          onExportResult={onExportResult}
+        />,
+      );
+    });
+  }
+
+  /** Opens the menu and waits until the chart instance is ready (options enabled). */
+  async function waitForReady(canvas: HTMLCanvasElement): Promise<void> {
+    await vi.waitFor(() => {
+      expect(Chart.getChart(canvas)).toBeTruthy();
+    });
+    await vi.waitFor(() => {
+      if (!container.querySelector('.export-menu')) click(menuButton());
+      expect(optionByLabel('PNG')?.disabled).toBe(false);
+    });
+  }
+
+  it('exports the live canvas as PNG bytes', async () => {
+    const onExportResult = vi.fn();
+    renderWithResult(onExportResult);
+    const canvas = container.querySelector('canvas');
+    if (!canvas) throw new Error('canvas not found');
+    await waitForReady(canvas);
+
+    const png = optionByLabel('PNG');
+    if (!png) throw new Error('PNG option not found');
+    click(png);
+
+    expect(onExportResult).toHaveBeenCalledTimes(1);
+    const result = onExportResult.mock.calls[0]?.[0] as ChartExportResult;
+    expect(result.kind).toBe('png');
+    expect(result.ok).toBe(true);
+    const blob = result.blob;
+    if (!blob) throw new Error('PNG blob not produced');
+    const view = new Uint8Array(await blob.arrayBuffer());
+    expect(Array.from(view.slice(0, PNG_MAGIC.length))).toEqual(PNG_MAGIC);
+  });
+
+  it('exports the report as PDF bytes', async () => {
+    const onExportResult = vi.fn();
+    renderWithResult(onExportResult);
+    const canvas = container.querySelector('canvas');
+    if (!canvas) throw new Error('canvas not found');
+    await waitForReady(canvas);
+
+    const pdf = optionByLabel('PDF');
+    if (!pdf) throw new Error('PDF option not found');
+    click(pdf);
+
+    await vi.waitFor(() => {
+      expect(onExportResult).toHaveBeenCalled();
+    });
+    const result = onExportResult.mock.calls[0]?.[0] as ChartExportResult;
+    expect(result.kind).toBe('pdf');
+    expect(result.ok).toBe(true);
+    const blob = result.blob;
+    if (!blob) throw new Error('PDF blob not produced');
+    const view = new Uint8Array(await blob.arrayBuffer());
+    expect(String.fromCharCode(...view.slice(0, 5))).toBe('%PDF-');
   });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ru } from '../src/ui/i18n/ru';
+import { formatIsoDate, ru } from '../src/ui/i18n/ru';
 
 describe('ru.nonEmptyValues', () => {
   it('agrees the noun with the count (1 / 2 / 5 forms)', () => {
@@ -39,5 +39,34 @@ describe('ru rows counters', () => {
     expect(ru.filteredRowsCount(1, 11)).toBe('Показано 1 из 11 строк');
     expect(ru.filteredRowsCount(1, 12)).toBe('Показано 1 из 12 строк');
     expect(ru.filteredRowsCount(2, 22)).toBe('Показано 2 из 22 строк');
+  });
+});
+
+describe('formatIsoDate', () => {
+  it('formats the local calendar date as ISO 8601 YYYY-MM-DD (AD-9)', () => {
+    // Local components: the report date must match the user's calendar.
+    expect(formatIsoDate(new Date(2026, 9, 15))).toBe('2026-10-15');
+    expect(formatIsoDate(new Date(2026, 0, 1))).toBe('2026-01-01');
+    // Single-digit month and day are zero-padded.
+    expect(formatIsoDate(new Date(2026, 2, 5))).toBe('2026-03-05');
+  });
+});
+
+describe('ru export strings', () => {
+  it('composes the file-name suffixes and the ready toast (CAP-7)', () => {
+    expect(ru.exportPngSuffix).toBe('график');
+    expect(ru.exportPdfSuffix).toBe('отчёт');
+    expect(ru.exportXlsxSuffix).toBe('данные');
+    expect(ru.exportFallbackName).toBe('отчёт');
+    expect(ru.exportReady('sample-данные.xlsx')).toBe('Экспорт готов: sample-данные.xlsx');
+  });
+
+  it('names the blocked-export reasons and the PDF report lines', () => {
+    expect(ru.exportBlockedNoRows).toContain('нет строк');
+    expect(ru.exportBlockedNoView).toContain('представление');
+    expect(ru.exportFiltersLabel('Исполнитель: Иванов')).toBe(
+      'Фильтры: Исполнитель: Иванов',
+    );
+    expect(ru.exportDateLabel('2026-10-15')).toBe('Дата формирования: 2026-10-15');
   });
 });

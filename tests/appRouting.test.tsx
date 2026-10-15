@@ -53,6 +53,7 @@ function stubApi(workbook: Workbook | null, overrides: StubOverrides = {}): Stor
       filterState: overrides.filterState ?? { categories: {} },
       viewConfig: null,
     },
+    activeSheet: null,
     rowSet: overrides.rowSet ?? { rows: [], total: workbook ? 1 : 0 },
     filterOptions: { categories: [], date: null },
     viewOptions: { dimensions: [], measures: [] },

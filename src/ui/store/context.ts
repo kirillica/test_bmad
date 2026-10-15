@@ -4,6 +4,7 @@ import type {
   FilterOptions,
   FilterState,
   RowSet,
+  Sheet,
   ViewConfig,
   ViewOptions,
 } from '../../domain/model';
@@ -11,6 +12,8 @@ import type { StoreState } from './reducer';
 
 export interface StoreApi {
   state: StoreState;
+  /** The active sheet of the loaded workbook, or `null` before a load (AD-12). */
+  activeSheet: Sheet | null;
   /** Derived once by the store from the active sheet and filters (AD-12). */
   rowSet: RowSet;
   /** Filter controls of the active sheet (categories + optional date). */
