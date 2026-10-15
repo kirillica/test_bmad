@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, useEffect, type ReactElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as XLSX from 'xlsx';
 import { App, CurrentScreen } from '../src/app/App';
 import type { FilterState, Row, Workbook } from '../src/domain/model';
@@ -10,6 +10,11 @@ import { ru } from '../src/ui/i18n/ru';
 import { StoreContext, useWorkbookStore, type StoreApi } from '../src/ui/store/context';
 import { WorkbookStoreProvider } from '../src/ui/store/workbook-store';
 import { HEADERS, makeSheet, makeWorkbook, rowFor, sampleRows } from './fixtures';
+
+// jsdom has no `<canvas>`; the real Chart.js lifecycle runs in browser mode.
+vi.mock('../src/adapters/charts', () => ({
+  createChart: vi.fn(async () => ({ update: vi.fn(), destroy: vi.fn() })),
+}));
 
 let container: HTMLDivElement;
 let root: Root;
@@ -46,14 +51,19 @@ function stubApi(workbook: Workbook | null, overrides: StubOverrides = {}): Stor
       validation: workbook ? { status: 'ok', issues: [] } : null,
       errorIssues: [],
       filterState: overrides.filterState ?? { categories: {} },
+      viewConfig: null,
     },
     rowSet: overrides.rowSet ?? { rows: [], total: workbook ? 1 : 0 },
     filterOptions: { categories: [], date: null },
+    viewOptions: { dimensions: [], measures: [] },
+    viewConfig: null,
+    aggregation: null,
     loadFile: async () => {},
     reset: () => {},
     setActiveSheet: () => {},
     setFilter: () => {},
     clearFilters: () => {},
+    setView: () => {},
   };
 }
 

@@ -52,7 +52,11 @@ function dateColumnIndex(sheet: Sheet): number {
   return sheet.columns.find((column) => column.type === 'date')?.index ?? -1;
 }
 
-function displayValue(value: CellValue): string {
+/**
+ * A cell as it is shown to the user (dates as ISO, AD-9). Shared by the filter
+ * option lists and the aggregation bucket keys — one definition for both.
+ */
+export function displayValue(value: CellValue): string {
   return value instanceof Date ? value.toISOString() : String(value);
 }
 

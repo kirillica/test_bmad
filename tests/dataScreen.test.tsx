@@ -144,6 +144,7 @@ function Harness({
     validation: { status: issues.length > 0 ? 'warnings' : 'ok', issues },
     errorIssues,
     filterState: { categories: {} },
+    viewConfig: null,
   };
   const [state, dispatch] = useReducer(reducer, start);
   const api = useMemo<StoreApi>(
@@ -151,11 +152,15 @@ function Harness({
       state,
       rowSet: { rows: [], total: 0 },
       filterOptions: { categories: [], date: null },
+      viewOptions: { dimensions: [], measures: [] },
+      viewConfig: null,
+      aggregation: null,
       loadFile: async () => {},
       reset: () => dispatch({ type: 'RESET' }),
       setActiveSheet: (name) => dispatch({ type: 'SET_SHEET', sheetName: name }),
       setFilter: (filterState) => dispatch({ type: 'SET_FILTER', filterState }),
       clearFilters: () => dispatch({ type: 'CLEAR_FILTERS' }),
+      setView: () => {},
     }),
     [state],
   );

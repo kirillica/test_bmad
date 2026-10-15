@@ -1,8 +1,16 @@
 import { useCallback, useMemo, useReducer, useRef, type ReactNode } from 'react';
-import type { FilterOptions, FilterState, RowSet } from '../../domain/model';
+import type {
+  AggregationResult,
+  FilterOptions,
+  FilterState,
+  RowSet,
+  ViewConfig,
+  ViewOptions,
+} from '../../domain/model';
 import { createIssue } from '../../domain/issues';
 import { analyzeWorkbook } from '../../domain/pipeline/validateStructure';
 import { applyFilter, buildFilterOptions } from '../../domain/pipeline/applyFilter';
+import { aggregate, buildViewOptions, defaultViewConfig } from '../../domain/pipeline/aggregate';
 import { selectActiveSheet } from '../../domain/pipeline/selectActiveSheet';
 import { loadWorkbookFile, readFileBytes } from '../../adapters/file-source';
 import { parseWorkbook } from '../../adapters/spreadsheet';
@@ -11,14 +19,17 @@ import { initialState, reducer } from './reducer';
 
 const EMPTY_ROW_SET: RowSet = { rows: [], total: 0 };
 const EMPTY_FILTER_OPTIONS: FilterOptions = { categories: [], date: null };
+const EMPTY_VIEW_OPTIONS: ViewOptions = { dimensions: [], measures: [] };
 
 export function WorkbookStoreProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
   // Monotonic id so a slower earlier load can never overwrite a newer one (AD-17).
   const requestId = useRef(0);
 
-  // The store is the single owner of derived analytics state (AD-12): both are
-  // computed from (active sheet, filterState) and only read by components.
+  // The store is the single owner of derived analytics state (AD-12): the
+  // filter/view options come from the active sheet, `rowSet` and `viewConfig`
+  // resolve it further (filters, sheet default) and `aggregation` is derived
+  // once from `(active sheet, rowSet, viewConfig)`. Components only read them.
   const activeSheet = state.workbook ? selectActiveSheet(state.workbook) : null;
   const filterOptions = useMemo(
     () => (activeSheet ? buildFilterOptions(activeSheet) : EMPTY_FILTER_OPTIONS),
@@ -28,6 +39,24 @@ export function WorkbookStoreProvider({ children }: { children: ReactNode }) {
     () => (activeSheet ? applyFilter(activeSheet, state.filterState) : EMPTY_ROW_SET),
     [activeSheet, state.filterState],
   );
+  const viewOptions = useMemo<ViewOptions>(
+    () => (activeSheet ? buildViewOptions(activeSheet) : EMPTY_VIEW_OPTIONS),
+    [activeSheet],
+  );
+  // The resolved view: the stored user choice if still valid, else the default
+  // for the active sheet (AD-13). `null` means the sheet offers no view.
+  const viewConfig = useMemo<ViewConfig | null>(
+    () => defaultViewConfig(viewOptions, state.viewConfig),
+    [viewOptions, state.viewConfig],
+  );
+  const aggregation = useMemo<AggregationResult | null>(
+    () => (activeSheet && viewConfig ? aggregate(activeSheet, rowSet, viewConfig) : null),
+    [activeSheet, rowSet, viewConfig],
+  );
+
+  const setView = useCallback((viewConfig: ViewConfig) => {
+    dispatch({ type: 'SET_VIEW', viewConfig });
+  }, []);
 
   const loadFile = useCallback(async (file: File) => {
     const id = (requestId.current += 1);
@@ -83,13 +112,30 @@ export function WorkbookStoreProvider({ children }: { children: ReactNode }) {
       state,
       rowSet,
       filterOptions,
+      viewOptions,
+      viewConfig,
+      aggregation,
       loadFile,
       setActiveSheet,
       setFilter,
       clearFilters,
+      setView,
       reset,
     }),
-    [state, rowSet, filterOptions, loadFile, setActiveSheet, setFilter, clearFilters, reset],
+    [
+      state,
+      rowSet,
+      filterOptions,
+      viewOptions,
+      viewConfig,
+      aggregation,
+      loadFile,
+      setActiveSheet,
+      setFilter,
+      clearFilters,
+      setView,
+      reset,
+    ],
   );
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;

@@ -73,6 +73,30 @@ describe('reducer', () => {
   });
 });
 
+describe('reducer view state (AD-13)', () => {
+  const view = { chartType: 'pie', dimension: 'статус', measure: 'затрачено времени (ч)' } as const;
+
+  it('SET_VIEW stores the view without touching the filters', () => {
+    const filtered = reducer(loaded, {
+      type: 'SET_FILTER',
+      filterState: { categories: { статус: ['Готово'] } },
+    });
+    const next = reducer(filtered, { type: 'SET_VIEW', viewConfig: view });
+    expect(next.viewConfig).toEqual(view);
+    expect(next.filterState).toBe(filtered.filterState);
+  });
+
+  it('LOAD_SUCCESS and SET_SHEET reset the view so the new sheet defaults apply', () => {
+    const withView = reducer(loaded, { type: 'SET_VIEW', viewConfig: view });
+
+    const loadedNext = reducer(withView, { type: 'LOAD_SUCCESS', workbook, validation });
+    expect(loadedNext.viewConfig).toBeNull();
+
+    const switched = reducer(withView, { type: 'SET_SHEET', sheetName: 'Итоги' });
+    expect(switched.viewConfig).toBeNull();
+  });
+});
+
 describe('reducer filter state (AD-3)', () => {
   const activeFilter: FilterState = { categories: { 'тип работы': ['Разработка'] } };
 

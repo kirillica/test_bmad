@@ -1,9 +1,14 @@
-import type { ColumnType, Issue } from '../../domain/model';
+import type { ColumnType, Issue, ViewConfig } from '../../domain/model';
 import { ROW_LIMIT } from '../../domain/schema';
 
 const ROW_LIMIT_TEXT = ROW_LIMIT.toLocaleString('ru-RU');
 
 const numberFormat = new Intl.NumberFormat('ru-RU');
+
+/** Formats a number with `Intl` `ru-RU` (AD-9). */
+export function formatNumber(value: number): string {
+  return numberFormat.format(value);
+}
 
 /** Russian plural for "строка" agreeing with the cardinal (1/2/5). */
 function pluralRows(count: number): string {
@@ -34,6 +39,15 @@ function pluralValues(count: number): string {
     return `${count} непустых значения`;
   }
   return `${count} непустых значений`;
+}
+
+/** Russian plural for "группа" agreeing with the cardinal (1/2/5). */
+function pluralGroups(count: number): string {
+  const mod10 = count % 10;
+  const mod100 = count % 100;
+  if (mod10 === 1 && mod100 !== 11) return `${count} группа`;
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${count} группы`;
+  return `${count} групп`;
 }
 
 /** Every user-facing string lives here — components never hardcode copy. */
@@ -86,6 +100,30 @@ export const ru = {
   } satisfies Record<ColumnType, string>,
   nonEmptyValues: pluralValues,
   rejectedFile: (name: string) => `Файл «${name}» не поддерживается.`,
+  // U3 views (CAP-6): the view switcher, the dimension/measure selectors and the
+  // two representations (chart card and pivot table).
+  viewLabel: 'Представление',
+  viewTypes: {
+    line: 'Линейный',
+    bar: 'Столбчатый',
+    pie: 'Круговой',
+    table: 'Таблица',
+  } satisfies Record<ViewConfig['chartType'], string>,
+  dimensionLabel: 'Разрез',
+  measureLabel: 'Показатель',
+  blankDimension: '(не указано)',
+  noDimensionReason: 'Представления недоступны: в листе нет категории со значениями.',
+  noMeasureReason: 'Представления недоступны: в листе нет числовой колонки.',
+  pivotCountLabel: 'Строк',
+  pivotTotalLabel: 'Итого',
+  pivotLabel: (dimension: string, measure: string) =>
+    `Сводная таблица: ${measure} по «${dimension}»`,
+  chartTitle: (view: string, measure: string, dimension: string) =>
+    `${view}: ${measure} по «${dimension}»`,
+  chartAriaLabel: (view: string, measure: string, dimension: string, groups: number) =>
+    `${view}, ${measure} по «${dimension}» — ${pluralGroups(groups)}`,
+  // Shown in place of the canvas when the lazy Chart.js chunk fails to load.
+  chartError: 'График недоступен: не удалось загрузить модуль графиков.',
 };
 
 export function messageForIssue(issue: Issue): string {

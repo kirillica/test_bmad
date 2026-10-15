@@ -1,5 +1,12 @@
 import { createContext, useContext } from 'react';
-import type { FilterOptions, FilterState, RowSet } from '../../domain/model';
+import type {
+  AggregationResult,
+  FilterOptions,
+  FilterState,
+  RowSet,
+  ViewConfig,
+  ViewOptions,
+} from '../../domain/model';
 import type { StoreState } from './reducer';
 
 export interface StoreApi {
@@ -8,10 +15,17 @@ export interface StoreApi {
   rowSet: RowSet;
   /** Filter controls of the active sheet (categories + optional date). */
   filterOptions: FilterOptions;
+  /** Analytics controls of the active sheet (dimensions + measures). */
+  viewOptions: ViewOptions;
+  /** The resolved view: the user's choice, or the sheet default (AD-13). */
+  viewConfig: ViewConfig | null;
+  /** Derived once from `(sheet, filterState, viewConfig)` (AD-12). */
+  aggregation: AggregationResult | null;
   loadFile: (file: File) => Promise<void>;
   setActiveSheet: (sheetName: string) => void;
   setFilter: (filterState: FilterState) => void;
   clearFilters: () => void;
+  setView: (viewConfig: ViewConfig) => void;
   reset: () => void;
 }
 

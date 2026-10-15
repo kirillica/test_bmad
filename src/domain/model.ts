@@ -106,3 +106,46 @@ export interface ViewConfig {
   dimension: string;
   measure: string;
 }
+
+/**
+ * A dimension the user may group by: a contract category column present in the
+ * sheet with at least one value — the very set the filters offer (AD-6, AD-8).
+ * `column` is the normalized header used for identity; `header` is for display.
+ */
+export interface DimensionOption {
+  column: string;
+  header: string;
+}
+
+/** A measure the user may sum: a numeric column of the sheet (CAP-6). */
+export interface MeasureOption {
+  column: string;
+  header: string;
+}
+
+/** The dimensions and measures a sheet offers the analytics controls (AD-13). */
+export interface ViewOptions {
+  dimensions: DimensionOption[];
+  measures: MeasureOption[];
+}
+
+/**
+ * One group of an aggregation (AD-4): the dimension value (`null` for the blank
+ * group «(не указано)»), the sum of its non-empty numbers, and its row count.
+ */
+export interface AggregationBucket {
+  key: string | null;
+  sum: number;
+  count: number;
+}
+
+/**
+ * The canonical aggregation of a `RowSet` by a `ViewConfig` (AD-4, AD-8, AD-12).
+ * `groupBy`/`measure` are normalized headers; `total` is the sum across groups.
+ */
+export interface AggregationResult {
+  groupBy: string;
+  measure: string;
+  buckets: AggregationBucket[];
+  total: number;
+}

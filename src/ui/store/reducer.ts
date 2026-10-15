@@ -1,4 +1,4 @@
-import type { FilterState, Issue, ValidationResult, Workbook } from '../../domain/model';
+import type { FilterState, Issue, ValidationResult, ViewConfig, Workbook } from '../../domain/model';
 
 export type LoadStatus = 'empty' | 'loading' | 'loaded' | 'error';
 
@@ -10,6 +10,8 @@ export interface StoreState {
   validation: ValidationResult | null;
   errorIssues: Issue[];
   filterState: FilterState;
+  /** The user's view choice; `null` lets the store resolve the sheet default (AD-13). */
+  viewConfig: ViewConfig | null;
 }
 
 /** A fresh, empty filter set. A new object each time keeps references immutable. */
@@ -25,6 +27,7 @@ export const initialState: StoreState = {
   validation: null,
   errorIssues: [],
   filterState: emptyFilter(),
+  viewConfig: null,
 };
 
 export type StoreAction =
@@ -34,6 +37,7 @@ export type StoreAction =
   | { type: 'SET_SHEET'; sheetName: string }
   | { type: 'SET_FILTER'; filterState: FilterState }
   | { type: 'CLEAR_FILTERS' }
+  | { type: 'SET_VIEW'; viewConfig: ViewConfig }
   | { type: 'RESET' };
 
 /**
@@ -54,6 +58,8 @@ export function reducer(state: StoreState, action: StoreAction): StoreState {
         validation: action.validation,
         errorIssues: [],
         filterState: emptyFilter(),
+        // A new file gets the new sheet's default view (AD-13).
+        viewConfig: null,
       };
     case 'LOAD_ERROR':
       return {
@@ -73,12 +79,17 @@ export function reducer(state: StoreState, action: StoreAction): StoreState {
         ...state,
         workbook: { ...workbook, activeSheetName: target.name },
         filterState: emptyFilter(),
+        // Another sheet resolves its own default dimension/measure (AD-13).
+        viewConfig: null,
       };
     }
     case 'SET_FILTER':
       return { ...state, filterState: action.filterState };
     case 'CLEAR_FILTERS':
       return { ...state, filterState: emptyFilter() };
+    case 'SET_VIEW':
+      // Changing the view never touches the filters (UX IA, AD-13).
+      return { ...state, viewConfig: action.viewConfig };
     case 'RESET':
       return { ...initialState, errorIssues: [], filterState: emptyFilter() };
     default:
